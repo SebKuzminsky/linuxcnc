@@ -967,6 +967,12 @@ If you have a REALLY large config that you wish to convert to this newer version
         n2 = d2.createElement('property')
         e2.appendChild(n2)
         n2.setAttribute('type', 'bool')
+        n2.setAttribute('name', "show_advanced_pages")
+        n2.setAttribute('value', str("%s"% self.advanced_option))
+
+        n2 = d2.createElement('property')
+        e2.appendChild(n2)
+        n2.setAttribute('type', 'bool')
         n2.setAttribute('name', "chooselastconfig")
         n2.setAttribute('value', str("%s"% self._chooselastconfig))
 
@@ -1381,7 +1387,7 @@ class App:
         self.jogminus = self.jogplus = 0
 
         # set preferences if they exist
-        link = short = False
+        link = short = advanced = False
         filename = os.path.expanduser("~/.pncconf-preferences")
         if os.path.exists(filename):
             match =  open(filename).read()
@@ -1402,6 +1408,8 @@ class App:
                     short = eval(text)
                 if name == "always_link":
                     link = eval(text)
+                if name == "show_advanced_pages":
+                    show_pages = eval(text)
                 if name == "machinename":
                     self.d._lastconfigname = text
                 if name == "chooselastconfig":
@@ -1421,8 +1429,10 @@ class App:
                             self._p.EXTRA_MESA_FIRMWAREDATA = []
                     if not self._p.EXTRA_MESA_FIRMWAREDATA == []:
                         print "**** PNCCONF INFO:    Found extra firmware in file"
+        # these are set from the hidden preference file
         self.widgets.createsymlink.set_active(link)
         self.widgets.createshortcut.set_active(short)
+        self.widgets.advancedconfig.set_active(show_pages)
 
         tempfile = os.path.join(self._p.DISTDIR, "configurable_options/ladder/TEMP.clp")
         if os.path.exists(tempfile):
@@ -3253,13 +3263,16 @@ Clicking 'existing custom program' will aviod this warning. "),False):
                             # if the sserial ptype is 7i76 or 7i77 then the data must be set to 7i76/7i77 signal
                             # as that sserial instance can only be for the 7i76/7i77 I/O points
                             if firmptype in (_PD.SS7I76M0,_PD.SS7I76M2,_PD.SS7I76M3):
-                                self.d[p] = _PD.I7I76_M0_T
+                                if not self.d[p] in (_PD.I7I76_M0_T,_PD.I7I76_M2_T):
+                                    self.d[p] = _PD.I7I76_M0_T
                                 self.d[ptype] = firmptype
-                                self.widgets[p].set_sensitive(0)
+                                self.widgets[p].set_sensitive(self.d.advanced_option)
+                                print 'state',self.d.advanced_option
                             elif firmptype in (_PD.SS7I77M0,_PD.SS7I77M1,_PD.SS7I77M3,_PD.SS7I77M4):
-                                self.d[p] = _PD.I7I77_M0_T
+                                if not self.d[p] in (_PD.I7I77_M3_T,_PD.I7I77_M0_T):
+                                    self.d[p] = _PD.I7I77_M0_T
                                 self.d[ptype] = firmptype
-                                self.widgets[p].set_sensitive(0)
+                                self.widgets[p].set_sensitive(self.d.advanced_option)
                         else:
                             self.widgets[complabel].set_text("")
                             self.widgets[p].set_sensitive(0)
@@ -3914,7 +3927,11 @@ Clicking 'existing custom program' will aviod this warning. "),False):
                                 table = "mesa%dsserial%d_%dtable3"% (boardnum, portnum, channelnum)
                                 self.widgets[table].show()
                                 if "7i76" in temp:
-                                    self.d["mesa%dsserial%d_%dsubboard"% (boardnum, portnum, channelnum)] = "7i76-m0"
+                                    if 'Mode 2' in temp:
+                                        ssfirmname = "7i76-m2"
+                                    else:
+                                        ssfirmname = "7i76-m0"
+                                    self.d["mesa%dsserial%d_%dsubboard"% (boardnum, portnum, channelnum)] = ssfirmname
                                 elif "7i64" in temp:
                                     self.d["mesa%dsserial%d_%dsubboard"% (boardnum, portnum, channelnum)] = "7i64"
                                 elif "7i69" in temp:
@@ -3929,7 +3946,12 @@ Clicking 'existing custom program' will aviod this warning. "),False):
                                 elif "7i73" in temp:
                                     self.d["mesa%dsserial%d_%dsubboard"% (boardnum, portnum, channelnum)] = "7i73-m1"
                                 elif "7i77" in temp:
-                                    self.d["mesa%dsserial%d_%dsubboard"% (boardnum, portnum, channelnum)] = "7i77-m0"
+                                    print 'ssname:',temp
+                                    if 'Mode 3' in temp:
+                                        ssfirmname = "7i77-m3"
+                                    else:
+                                        ssfirmname = "7i77-m0"
+                                    self.d["mesa%dsserial%d_%dsubboard"% (boardnum, portnum, channelnum)] = ssfirmname
                                     if channelnum in(0,3):
                                         self.widgets[table].hide()
                                     elif channelnum in(1,4):
